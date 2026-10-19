@@ -29,3 +29,18 @@ if (MSVC)
 else ()
     target_compile_options(benchmark PRIVATE -O2)
 endif ()
+
+# MinGW: libstdc++ i libgcc wbudowane w exe, a libwinpthread-1.dll kopiowany z kompilatora
+# obok exe, zeby Windows nie wzial starszej wersji z innego MinGW w PATH.
+# (Pelne -static nie dziala z MinGW dolaczonym do CLion: brak __intrinsic_setjmpex)
+if (MINGW)
+    get_filename_component(MINGW_BIN "${CMAKE_CXX_COMPILER}" DIRECTORY)
+    foreach (target atsp benchmark)
+        target_link_options(${target} PRIVATE -static-libgcc -static-libstdc++)
+        if (EXISTS "${MINGW_BIN}/libwinpthread-1.dll")
+            add_custom_command(TARGET ${target} POST_BUILD
+                    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                    "${MINGW_BIN}/libwinpthread-1.dll" $<TARGET_FILE_DIR:${target}>)
+        endif ()
+    endforeach ()
+endif ()
